@@ -99,5 +99,5 @@ export async function generateUploadUrl(
   })
   await todosAccess.updateUrl(userId, todoId, this.bucketName)
 
-  return uploadUrl
+  return uploadUrl as string
 }
