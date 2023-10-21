@@ -1,14 +1,12 @@
-import { CreateTodoRequest } from '../requests/CreateTodoRequest'
-import * as uuid from 'uuid'
 import { TodoAccess } from '../dataLayer/todosAcess'
-import { createLogger } from '../utils/logger'
-import { AttachmentUtils } from '../helpers/attachmentUtils'
+import { CreateTodoRequest } from '../requests/CreateTodoRequest'
 import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
+import { createLogger } from '../utils/logger'
+import * as uuid from 'uuid'
 
 // TODO: Implement businessLogic
-const logger = createLogger('TodoAccess')
-const attachmentUtils = new AttachmentUtils()
-const todoAccess = new TodoAccess()
+const logger = createLogger('Business Logic CRUD todo')
+const todoAccessLayer = new TodoAccess()
 
 /**
  * getTodosForUser.
@@ -17,7 +15,7 @@ const todoAccess = new TodoAccess()
  * @returns TodoItem[]
  */
 export const getTodosForUser = async (userId: string) => {
-  return todoAccess.getTodos(userId)
+  return await todoAccessLayer.getTodos(userId)
 }
 
 /**
@@ -27,18 +25,26 @@ export const getTodosForUser = async (userId: string) => {
  * @param userId UserId
  * @returns newItem TodoItem
  */
-export const createTodo = async (userId: string, todo: CreateTodoRequest) => {
-  const todoId = uuid.v4()
-  logger.info(`Creating todo ${todoId}`)
-  const attachmentUrl = attachmentUtils.getAttachmentUrl(todoId)
-  return todoAccess.createTodo({
-    userId,
-    todoId,
-    createdAt: new Date().toISOString(),
-    done: false,
-    attachmentUrl,
-    ...todo
-  })
+export const createTodo = async (
+  request: CreateTodoRequest,
+  userId: string
+) => {
+  logger.info('BL: createTodo')
+
+  if (request) {
+    logger.info('Adding a new todo')
+    const todoId = uuid.v4()
+    return await todoAccessLayer.createTodo({
+      userId: userId,
+      todoId: todoId,
+      createdAt: new Date().toISOString(),
+      done: false,
+      attachmentUrl: null,
+      ...request
+    })
+  } else {
+    logger.error('Add failure')
+  }
 }
 
 /**
@@ -52,9 +58,9 @@ export const createTodo = async (userId: string, todo: CreateTodoRequest) => {
 export const updateTodo = async (
   userId: string,
   todoId: string,
-  todo: UpdateTodoRequest
+  request: UpdateTodoRequest
 ) => {
-  return todoAccess.updateTodo(userId, todoId, todo)
+  await todoAccessLayer.updateTodo(userId, todoId, request)
 }
 /**
  * deleteTodo
@@ -65,6 +71,19 @@ export const updateTodo = async (
  */
 
 export const deleteTodo = async (userId: string, todoId: string) => {
-  return todoAccess.deleteTodo(userId, todoId)
+  await todoAccessLayer.deleteTodo(userId, todoId)
 }
 
+/**
+ * createAttachmentPresignedUrl
+ */
+
+export const createAttachmentPresignedUrl = async (userId, todoId) => {
+  const attachmentId = uuid.v4()
+
+  return await todoAccessLayer.createAttachmentPresignedUrl(
+    userId,
+    todoId,
+    attachmentId
+  )
+}

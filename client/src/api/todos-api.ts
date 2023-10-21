@@ -14,7 +14,7 @@ export async function getTodos(idToken: string): Promise<Todo[]> {
     }
   })
   console.log('Todos:', response.data)
-  return response.data
+  return response.data.items
 }
 
 export async function createTodo(
@@ -31,7 +31,7 @@ export async function createTodo(
       }
     }
   )
-  return response.data
+  return response.data.item
 }
 
 export async function patchTodo(
