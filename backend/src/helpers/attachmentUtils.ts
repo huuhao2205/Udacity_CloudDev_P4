@@ -17,11 +17,11 @@ export class AttachmentUtils {
     return `https://${this.bucketName}.s3.amazonaws.com/${todoId}`
   }
 
-  getUploadUrl(todoId: string): string {
-    return this.s3.getSignedUrl('putObject', {
+  getSignedUrl(todoId: string): Promise<string> {
+    return this.s3.getSignedUrlPromise('putObject', {
       Bucket: this.bucketName,
       Key: todoId,
       Expires: urlExpiration
-    }) as string
+    })
   }
 }

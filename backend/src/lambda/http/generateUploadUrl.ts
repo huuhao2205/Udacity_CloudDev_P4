@@ -1,39 +1,60 @@
 import 'source-map-support/register'
 
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
-import * as middy from 'middy'
-import { cors, httpErrorHandler } from 'middy/middlewares'
-import { getUserId } from '../utils'
-import { generateUploadUrl } from '../../businessLogic/todos'
+import * as AWS from 'aws-sdk'
+import * as AWSXRay from 'aws-xray-sdk'
+
 import { createLogger } from '../../utils/logger'
 
-const logger = createLogger('TodoAccess')
+const XAWS = AWSXRay.captureAWS(AWS)
+
+const bucketName = process.env.S3_BUCKET
+const urlExpiration = Number(process.env.SIGNED_URL_EXPIRATION)
+const s3 = new XAWS.S3({
+  signatureVersion: 'v4'
+})
+
+import * as middy from 'middy'
+import { cors } from 'middy/middlewares'
+import { TodoAccess } from '../../dataLayer/todosAcess'
+import { getUserId } from '../utils'
+
+const todoAccess = new TodoAccess()
+const logger = createLogger('generateUploadUrl')
 
 export const handler = middy(
   async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-    try {
-      const todoId = event.pathParameters.todoId
-      // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
-      const userId: string = getUserId(event)
-      const uploadUrl: string = await generateUploadUrl(userId, todoId)
+    const todoId = event.pathParameters.todoId
+    // TODO: Return a presigned URL to upload a file for a TODO item with the provided id
+    logger.info('Generating upload URL:', {
+      todoId
+    })
+    const userId = getUserId(event)
 
-      return {
-        statusCode: 200,
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Credentials': true
-        },
-        body: JSON.stringify({
-          uploadUrl: uploadUrl
-        })
-      }
-    } catch (e) {
-      logger.info('error')
+    const uploadUrl = s3.getSignedUrl('putObject', {
+      Bucket: bucketName,
+      Key: todoId,
+      Expires: urlExpiration
+    })
+    logger.info('Generating upload URL:', {
+      todoId,
+      uploadUrl
+    })
+
+    await todoAccess.saveImgUrl(userId, todoId, bucketName)
+
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': '*'
+      },
+      body: JSON.stringify({
+        uploadUrl: uploadUrl
+      })
     }
-    //return undefined
   }
 )
-handler.use(httpErrorHandler()).use(
+handler.use(
   cors({
     credentials: true
   })

@@ -1,25 +1,15 @@
-import { String } from 'aws-sdk/clients/cloudsearch'
-import { TodosAccess } from '../dataLayer/todosAcess'
-import { TodoItem } from '../models/TodoItem'
 import { CreateTodoRequest } from '../requests/CreateTodoRequest'
-import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
-import { createLogger } from '../utils/logger'
 import * as uuid from 'uuid'
-//import * as createError from 'http-errors'
+import { TodoAccess } from '../dataLayer/todosAcess'
+import { createLogger } from '../utils/logger'
+import { AttachmentUtils } from '../helpers/attachmentUtils'
+import { UpdateTodoRequest } from '../requests/UpdateTodoRequest'
 
 // TODO: Implement businessLogic
 const logger = createLogger('TodoAccess')
-const todosAccess = new TodosAccess()
-import * as AWS from 'aws-sdk'
-import * as AWSXRay from 'aws-xray-sdk'
+const attachmentUtils = new AttachmentUtils()
+const todoAccess = new TodoAccess()
 
-const XAWS = AWSXRay.captureAWS(AWS)
-
-const bucketName = process.env.S3_BUCKET
-const urlExpiration = Number(process.env.SIGNED_URL_EXPIRATION)
-const s3 = new XAWS.S3({
-  signatureVersion: 'v4'
-})
 /**
  * getTodosForUser.
  *
@@ -27,8 +17,9 @@ const s3 = new XAWS.S3({
  * @returns TodoItem[]
  */
 export const getTodosForUser = async (userId: string) => {
-  return todosAccess.getAllTodos(userId)
+  return todoAccess.getTodos(userId)
 }
+
 /**
  * createTodo.
  *
@@ -36,23 +27,18 @@ export const getTodosForUser = async (userId: string) => {
  * @param userId UserId
  * @returns newItem TodoItem
  */
-export const createTodo = async (
-  userId: string,
-  todo: CreateTodoRequest
-): Promise<TodoItem> => {
-  logger.info(`Creating todo function`)
+export const createTodo = async (userId: string, todo: CreateTodoRequest) => {
   const todoId = uuid.v4()
-  const s3attachmentUrl = `https://${bucketName}.s3.amazonaws.com/${todoId}`
-  const createdAt = new Date().toISOString()
-  const newItem = {
+  logger.info(`Creating todo ${todoId}`)
+  const attachmentUrl = attachmentUtils.getAttachmentUrl(todoId)
+  return todoAccess.createTodo({
     userId,
     todoId,
-    createdAt,
+    createdAt: new Date().toISOString(),
     done: false,
-    s3attachmentUrl,
+    attachmentUrl,
     ...todo
-  }
-  return await todosAccess.createTodoRow(newItem)
+  })
 }
 
 /**
@@ -64,11 +50,11 @@ export const createTodo = async (
  * @returns
  */
 export const updateTodo = async (
-  todo: UpdateTodoRequest,
   userId: string,
-  todoId: string
+  todoId: string,
+  todo: UpdateTodoRequest
 ) => {
-  return todosAccess.updateTodoItem(todo, userId, todoId)
+  return todoAccess.updateTodo(userId, todoId, todo)
 }
 /**
  * deleteTodo
@@ -77,27 +63,8 @@ export const updateTodo = async (
  * @param userId UserId
  * @returns string
  */
-export const deleteTodo = async (todoId: string) => {
-  return todosAccess.deleteTodo(todoId)
+
+export const deleteTodo = async (userId: string, todoId: string) => {
+  return todoAccess.deleteTodo(userId, todoId)
 }
 
-/**
- * createAttachmentPresignedUrl.
- *
- * @param todoId TodoId
- * @param userId UserId
- * @returns string
- */
-export async function generateUploadUrl(
-  userId: string,
-  todoId: String
-): Promise<string> {
-  const uploadUrl = s3.getSignedUrl('putObject', {
-    Bucket: bucketName,
-    Key: todoId,
-    Expires: urlExpiration
-  })
-  await todosAccess.updateUrl(userId, todoId, this.bucketName)
-
-  return uploadUrl as string
-}

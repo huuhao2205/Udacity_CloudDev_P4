@@ -20,9 +20,9 @@ provider:
   # Use these variables in the functions and resouorces section below. For example,
   # ${self:provider.environment.ATTACHMENT_S3_BUCKET}
   environment:
-    TODOS_TABLE: mytable2205-${self:provider.stage}
+    TODOS_TABLE: mytable3-${self:provider.stage}
     TODOS_CREATED_AT_INDEX: CreatedAtIndex
-    S3_BUCKET: mybucket2205-${self:provider.stage}
+    S3_BUCKET: mys3bucket137982-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
     TODOS_USER_INDEX: TodoUserIndex
     PROJECT_NAME: Todo
@@ -203,11 +203,6 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: ${self:provider.environment.S3_BUCKET}
-        PublicAccessBlockConfiguration:
-          BlockPublicAcls: false
-          BlockPublicPolicy: false
-          IgnorePublicAcls: false
-          RestrictPublicBuckets: false
         CorsConfiguration:
           CorsRules:
             - AllowedOrigins:
